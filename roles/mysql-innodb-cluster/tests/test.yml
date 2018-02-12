@@ -1,0 +1,12 @@
+---
+- hosts: db
+  remote_user: root
+  roles:
+  - role: mysql-innodb-cluster
+    innodb_buffer_pool_size: "32M"
+    innodb_log_file_size: "5M"
+    mysql_type: community
+    cluster_name: docker
+    group_replication_ip_whitelist: "172.17.0.0/16"
+    mysql_root_password: "secret"
+

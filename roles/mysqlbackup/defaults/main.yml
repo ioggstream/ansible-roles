@@ -1,0 +1,3 @@
+---
+# defaults file for mysqlbackup
+mysqlbackup_home: /home/mysqlbackup

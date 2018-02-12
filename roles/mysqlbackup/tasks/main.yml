@@ -1,0 +1,26 @@
+---
+# tasks file for mysqlbackup
+- name: Install useful packages.
+  package: name="{{item}}"
+  with_items:
+  - zip
+  - unzip
+  - gzip
+  - bzip2
+  - curl
+  - wget
+
+- name: Install MySQL Enterprise Backup.
+  package: name=meb
+
+- name: Create mysqlbackup user with uid 1001.
+  user: name=mysqlbackup group=mysql uid=1001 home="{{mysqlbackup_home}}" createhome=yes
+
+- name: Create backup directories.
+  file: path="{{ item | expanduser }}" state=directory owner=mysqlbackup group=mysql
+  with_items:
+  - '~mysqlbackup/full'
+  - '~mysqlbackup/incremental'
+  - '~mysqlbackup/restore'
+
+

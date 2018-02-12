@@ -1,0 +1,4 @@
+---
+# defaults file for mysql-layout
+mysql_username: mysql
+mysql_nproc: 2048

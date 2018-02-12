@@ -1,0 +1,11 @@
+---
+# defaults file for mysql-innodb-cluster
+group_replication_ip_whitelist: "172.17.0.0/24"
+group_replication_group_name: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+mysql_root_password: "secret"
+mysql_repl_password: "secret"
+cluster_name: docker
+mysql_type: community
+innodb_buffer_pool_size: "128M"
+innodb_log_file_size: "50M"
+

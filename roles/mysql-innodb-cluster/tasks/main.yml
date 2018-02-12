@@ -1,0 +1,97 @@
+---
+# tasks file for mysql-innodb-cluster
+- name: Install mysql-shell
+  package:
+    name: "mysql-shell-{{mysql_type}}"
+
+- name: Get my.cnf options and fail if already configured.
+  command:
+    grep ^group_replication /etc/my.cnf
+  register: has_group_replication
+  changed_when: false
+  check_mode: no
+  failed_when: false
+
+- name: Fail if group replication is already configured.
+  when: not ansible_check_mode
+  assert:
+    that:
+    - has_group_replication.rc == 1
+    msg: |
+      Group Replication already configured. Nothing to do.
+
+- name: Enable mysqld to communicate via extra ports.
+  when: ansible_connection != 'docker'
+  include_tasks: selinux-firewalld-port.yml
+  with_items:
+  - port: 33061
+    proto: tcp
+  - port: 13306
+    proto: tcp
+
+- name: Copy template configuration with relocated datadir.
+  template: dest="/etc/my.cnf" src=my.cnf
+  register: mycnf
+
+- name: Copy initialization files.
+  template:
+    dest: "/var/lib/mysql-files" 
+    src: "{{item}}"
+  with_items:
+  - initialize-replication.sql
+  - preliminary-checks.js
+  - create-cluster.js
+  - persist-configuration.js
+
+- name: Initialize datadir if group replication is not configured.
+  when: has_group_replication.rc == 1
+  command: |
+    mysqld --initialize --user=mysql
+
+- name: Stop mysqld.
+  service: name=mysqld state=stopped
+
+- name: Ensure mysqld is stopped.
+  command: pgrep -fa mysqld.*--
+  register: mysqld_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: First boot resetting user credentials.
+  when: >-
+    mysqld_status.rc != 0
+  command: |
+    mysqld --init-file=/var/lib/mysql-files/initialize-replication.sql --user=mysql
+  async: 300
+  poll: 0
+  register: mysqld_jid
+
+- name: Wait for mysql
+  wait_for:
+    host: 0.0.0.0
+    port: 3306
+    delay: 1
+    timeout: 20
+
+- name: Prepare instance for clustering.
+  command: mysqlsh --js -f /var/lib/mysql-files/preliminary-checks.js --log-level=4
+
+- name: Take a nap
+  pause: seconds=5
+
+- name: Restart mysqld after configuration changes.
+  command: |
+    mysql -uroot -p{{mysql_root_password}} -e 'SHUTDOWN;'
+  
+- name: Connect to the instance to be clustered and create the cluster.
+  delegate_to: play_hosts[0]
+  command: |
+    mysqlsh root@{{ansible_default_ipv4.address}}:3306 -p{{mysql_root_password}} --js -f /var/lib/mysql-files/create-cluster.js   --log-level=4
+
+- name: Warning about removing all files with cleartext passwords around.
+  debug: msg="Remove all files containing passwords in /var/lib/mysql-files/*"
+
+- name: Persist configuration on all nodes.
+  command: |
+    mysqlsh root@localhost:3306 -p{{mysql_root_password}} --js -f /var/lib/mysql-files/persist-configuration.js --log-level=4

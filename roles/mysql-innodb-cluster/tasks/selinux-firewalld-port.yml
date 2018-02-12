@@ -1,0 +1,14 @@
+- name: Allow traffic to port via firewalld.
+  firewalld:
+    port: "{{item.port}}/{{item.proto}}"
+    permanent: true
+    state: enabled
+    immediate: yes
+
+- name: Selinux mysqld access to port.
+  seport:
+    ports: "{{item.port}}"
+    proto: "{{item.proto}}"
+    setype: mysqld_port_t
+    state: present
+

@@ -1,0 +1,36 @@
+---
+# tasks file for mysql-layout
+- name: Create mysql limits file.
+  lineinfile: 
+    dest: "/etc/security/limits.d/99-{{item}}.conf" 
+    line: "# Limits for mysql user."
+    insertbefore: BOF
+    create: yes
+    owner: root 
+    group: root 
+    mode: 0644
+  with_items:
+  - "{{mysql_username}}"
+
+- name: Allow mysql to use enough resources
+  pam_limits:
+    dest: "/etc/security/limits.d/99-{{mysql_username}}.conf"
+    domain: "{{mysql_username}}"
+    limit_type: "{{item.type}}"
+    limit_item: "{{item.key}}"
+    value: "{{item.value}}"
+    comment: "{{item.comment}}"
+  with_items:
+   - { type: '-', key: 'nofile', value: 64000, comment: ' Open enough files' }
+   - { type: '-', key: 'memlock', value: 'unlimited', comment: ' Set memory lock' }
+   - { type: '-', key: 'nproc', value: "{{mysql_nproc}}", comment: ' Run enough processes/threads' }
+
+- name: Limit swapping.
+  when: >
+    ansible_connection != 'docker'
+  sysctl:
+    name: vm.swappiness
+    value: 1
+    sysctl_file: "/etc/sysctl.d/99-{{mysql_username}}.conf"
+    reload: yes
+

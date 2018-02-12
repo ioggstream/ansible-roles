@@ -1,0 +1,251 @@
+# MySQL Configuration file.
+# TODO: modify the following parameters after the initialization
+#  innodb_buffer_pool_size
+#
+
+[client]
+port=3306
+
+
+[mysql]
+socket=/db/data/mysql/mysqld.sock
+
+
+# SERVER SECTION
+# ----------------------------------------------------------------------
+#
+# The following options will be read by the MySQL Server. Make sure that
+# you have installed the server correctly (see above) so it reads this
+# file.
+#
+[mysqld]
+
+user=mysql
+#symbolic-links=0
+
+# Connection settings
+port=3306
+socket=/db/data/mysql/mysqld.sock
+datadir=/db/data/mysql
+
+# pid file location is set there via systemd. Don't change it.
+pid-file=/var/run/mysqld/mysqld.pid
+
+
+# Use mysql 5.7 default. Old value was:
+#sql-mode="STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+
+
+# Disable core file as db is too big.
+# core-file
+
+#Lock mysql memory in ram and avoid swapping.
+memlock=1
+
+# The default character set that will be used when a new schema or table is
+# created and no character set is defined.
+# TODO verificare con sviluppo se usare utf8 o latin1.Attenzione anche agli indici
+#      creati che devono rispettare il character-set.
+character-set-server=latin1
+lower_case_table_names=1
+
+
+# General and Slow logging.
+log-output=NONE
+general-log=0
+general_log_file="{{ansible_hostname}}"
+slow-query-log=1
+slow-query-log-file=/db/log/slow-query.log
+log-short-format=1
+long_query_time=2
+
+# Error Logging.
+log-error="/db/log/error-log.log"
+log_timestamps=SYSTEM
+
+# The maximum amount of concurrent sessions the MySQL server will
+# allow. One of these connections will be reserved for a user with
+# SUPER privileges to allow the administrator to login even if the
+# connection limit has been reached.
+max_connections=350
+
+
+# Disable the query_cache_size unless realistic benchmarks don't
+#  prove its worth.
+query_cache_type=0
+query_cache_size=0
+
+
+# The number of open tables for all threads. Increasing this value
+# increases the number of file descriptors that mysqld requires.
+# Therefore you have to make sure to set the amount of open files
+# allowed to at least 4096 in the variable "open-files-limit" in
+# section [mysqld_safe]
+table_open_cache=2000
+
+# A cache for reusing threads. Before tuning, monitor:
+#   - threads_created vs uptime_since_flush status
+#   - threads_connected
+thread_cache_size=38
+
+##
+# Per-thread buffers:
+##
+# Maximum size for internal (in-memory) temporary tables. If a table
+# grows larger than this value, it is automatically converted to disk
+# based table This limitation is for a single table. There can be many
+# of them.
+tmp_table_size=300M
+max_heap_table_size=300M
+
+
+# If you see many sort_merge_passes per second in SHOW GLOBAL STATUS output, you can consider increasing the
+# sort_buffer_size value to speed up ORDER BY or GROUP BY operations that cannot be improved with query optimization
+# or improved indexing.
+sort_buffer_size=256K
+
+# The minimum size of the buffer that is used for plain index scans, range index scans, and joins that do not use
+# indexes and thus perform full table scans.
+join_buffer_size=256K
+
+
+#*** MyISAM Specific options
+
+# The maximum size of the temporary file MySQL is allowed to use while
+# recreating the index (during REPAIR, ALTER TABLE or LOAD DATA INFILE.
+# If the file-size would be bigger than this, the index will be created
+# through the key cache (which is slower).
+myisam_max_sort_file_size=100G
+
+# If the temporary file used for fast index creation would be bigger
+# than using the key cache by the amount specified here, then prefer the
+# key cache method.  This is mainly used to force long character keys in
+# large tables to use the slower key cache method to create the index.
+myisam_sort_buffer_size=738M
+
+# Size of the Key Buffer, used to cache index blocks for MyISAM tables.
+# Do not set it larger than 30% of your available memory, as some memory
+# is also required by the OS to cache rows. Even if you're not using
+# MyISAM tables, you should still set it to 8-64M as it will also be
+# used for internal temporary disk tables.
+key_buffer_size=128M
+
+# Size of the buffer used for doing full table scans of MyISAM tables.
+# Allocated per thread, if a full scan is needed.
+read_buffer_size=64K
+read_rnd_buffer_size=256K
+
+# This buffer is allocated when MySQL needs to rebuild the index in
+# REPAIR, OPTIMZE, ALTER table statements as well as in LOAD DATA INFILE
+# into an empty table. It is allocated per thread so be careful with
+# large settings.
+sort_buffer_size=512K
+
+
+#*** INNODB Specific options ***
+
+
+# InnoDB cache size. Monitor with Workbench or :
+#  - innodb_buffer_pool_pages_used vs innodb_buffer_pool_pages_total
+innodb_buffer_pool_size={{innodb_buffer_pool_size}}
+innodb_fast_shutdown=0
+log_bin_trust_function_creators
+
+# Redo & Undo log file size and buffer. By default uses 2*innodb_log_file_size,
+#  for this circular buffer.
+innodb_log_file_size={{innodb_log_file_size}}
+innodb_log_buffer_size=16M
+
+# See for mysql 8.0+ https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_undo_tablespaces
+innodb_undo_tablespaces=2
+
+# It specifies the maximum number of .ibd files that MySQL can keep open at one time. The minimum value is 10.
+innodb_open_files=2000
+
+#If enabled InnoDB periodically writes output "show engine innodb status" to innodb_status.pid
+innodb-status-file=1
+
+
+# The maximum size of one packet or any generated or intermediate string, or any parameter sent by the
+# mysql_stmt_send_long_data() C API function.
+max_allowed_packet=1G
+
+
+# If more than this many successive connection requests from a host are interrupted without a successful connection,
+# the server blocks that host from performing further connections.
+# TODO solo in caso di errori di connessione.
+# max_connect_errors=100
+# net_retry_count=99999
+# net_buffer_length=32M
+# wait_timeout=300
+
+
+# Changes the number of file descriptors available to mysqld.
+# You should try increasing the value of this option if mysqld gives you the error "Too many open files".
+open_files_limit=8192
+
+# The number of table definitions (from .frm files) that can be stored in the definition cache.
+# If you use a large number of tables, you can create a large table definition cache to speed up opening of tables.
+# The table definition cache takes less space and does not use file descriptors, unlike the normal table cache.
+# The minimum and default values are both 400.
+# table_definition_cache=1400
+table_open_cache=1500
+
+#Makes sysdate replication safe. Must be set
+# on *both* master and slave.
+sysdate-is-now
+explicit_defaults_for_timestamp
+expire_logs_days=3
+
+# Replication
+#
+server-id={{ansible_default_ipv4.address | replace('.', '') }}
+report-host={{ansible_default_ipv4.address}}
+report-port=3306
+
+# Binary log default size is 1GB. You can lower with
+# max_binlog_size
+log-bin=/db/binlog/{{ansible_hostname}}-bin
+
+
+#binlog-format=ROW
+gtid-mode=on
+enforce-gtid-consistency=ON
+log-slave-updates=ON
+sync-binlog=1
+# max_binlog_size=30M
+# binlog-checksum=CRC32
+# binlog-rows-query-log_events=1
+# binlog-row-image=minimal
+
+#Store master info repository on table and sync it every one event.
+master-info-repository=TABLE
+
+# Enable semi-synchronous replication.
+# see https://dev.mysql.com/doc/refman/5.7/en/replication-semisync-installation.html
+#  > INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';
+#  > INSTALL PLUGIN rpl_semi_sync_slave SONAME 'semisync_slave.so';
+plugin-load=rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so
+rpl_semi_sync_master_enabled=1
+rpl_semi_sync_master_timeout=1000 # 1 second
+rpl_semi_sync_slave_enabled=1
+
+#Enable both master and slave binlog verification.
+master-verify-checksum=1
+slave-sql-verify-checksum=1
+
+relay-log=/db/binlog/{{ansible_hostname}}-relay
+relay-log-info-repository=TABLE
+relay-log-purge=1
+
+# Group Replication
+binlog_checksum=NONE
+binlog_format=ROW
+transaction_write_set_extraction=XXHASH64
+#loose-group_replication_group_name="{{group_replication_group_name}}"
+#loose-group_replication_start_on_boot=off
+#loose-group_replication_bootstrap_group=off
+#loose-group_replication_local_address= "{{ansible_default_ipv4.address}}:33061"
+#loose-group_replication_group_seeds= "127.0.0.1:24901,127.0.0.1:24902,127.0.0.1:24903"
+
+
